@@ -13,8 +13,9 @@ class bcolors:
 class Timeshift(dnf.Plugin):
     name = 'timeshift'
  
-    def __init__(self, base):
+    def __init__(self, base, cli):
         self.base = base
+        self.cli = cli
         self.description = " ".join(sys.argv)
         self._pre_snap_created = False
  
