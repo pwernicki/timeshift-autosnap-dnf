@@ -33,9 +33,9 @@ class Timeshift(dnf.Plugin):
             if conf.has_option('main', 'actions'):
                 self.actions = conf.get('main', 'actions')
             if conf.has_option('main', 'pre_snap'):
-                self.pre_snap = conf.getbool('main', 'pre_snap')
+                self.pre_snap = conf.getboolean('main', 'pre_snap')
             if conf.has_option('main', 'post_snap'):
-                self.post_snap = conf.getbool('main', 'post_snap')
+                self.post_snap = conf.getboolean('main', 'post_snap')
 
         self.actions_list = [x.strip() for x in self.actions.split(',')]
 
