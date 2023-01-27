@@ -32,16 +32,12 @@ class Timeshift(dnf.Plugin):
                 self.max_backups = conf.getint('main', 'max_backups')
             if conf.has_option('main', 'actions'):
                 self.actions = conf.get('main', 'actions')
-            if conf.has_option('main', 'pre_snap'):
-                self.pre_snap = conf.getboolean('main', 'pre_snap')
             if conf.has_option('main', 'post_snap'):
                 self.post_snap = conf.getboolean('main', 'post_snap')
 
         self.actions_list = [x.strip() for x in self.actions.split(',')]
 
     def pre_transaction(self):
-        if not self.pre_config:
-            return
         if not self.base.transaction:
             return
 
@@ -57,6 +53,7 @@ class Timeshift(dnf.Plugin):
 
     def transaction(self):
         if not self.post_snap:
+            self.delete_old_snap()
             return
         if not self.base.transaction:
             return
@@ -69,28 +66,31 @@ class Timeshift(dnf.Plugin):
 
                 print (bcolors.OKCYAN+'timeshift: creating post snapshot'+bcolors.ENDC)
                 subprocess.run(["timeshift", "--create", "--comments", "after dnf"+self.action_description], capture_output=True)
-
-            timeshift_out = subprocess.run(["timeshift", "--list"], capture_output=True).stdout
-
-            regexp = "[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\\s+[A-Z]+"
-
-            snap_find = re.findall(regexp, str(timeshift_out))
-
-            snap_list = []
-
-            for find in snap_find:
-                find_tup = tuple(find.split())
-                if (find_tup[1] == 'O'):
-                    snap_list.append(find_tup[0])
-
-            snap_list.sort(reverse=True)
-
-            i = 0
-            for snap in snap_list:
-                if (i >= self.max_backups):
-                    print (bcolors.OKCYAN+'timeshift: deleting snapshot '+snap+bcolors.ENDC)
-                    subprocess.run(["timeshift", "--delete", "--snapshot", snap], capture_output=True)
-                i += 1
+                self.delete_old_snap()
 
         except subprocess.CalledProcessError as e:
             print(bcolors.FAIL+'creating of post snapshot failed: %s'+bcolors.ENDC, e.output)
+
+    def delete_old_snap(self):
+        timeshift_out = subprocess.run(["timeshift", "--list"], capture_output=True).stdout
+
+        regexp = "[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\\s+[A-Z]+"
+
+        snap_find = re.findall(regexp, str(timeshift_out))
+
+        snap_list = []
+
+        for find in snap_find:
+            find_tup = tuple(find.split())
+            if (find_tup[1] == 'O'):
+                snap_list.append(find_tup[0])
+
+        snap_list.sort(reverse=True)
+
+        i = 0
+        for snap in snap_list:
+            if (i >= self.max_backups):
+                print (bcolors.OKCYAN+'timeshift: deleting snapshot '+snap+bcolors.ENDC)
+                subprocess.run(["timeshift", "--delete", "--snapshot", snap], capture_output=True)
+            i += 1
+
